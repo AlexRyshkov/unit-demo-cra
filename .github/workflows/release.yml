@@ -36,6 +36,7 @@ jobs:
     if: ${{ always() }}
     name: Create Issue
     runs-on: ubuntu-latest
+    permissions: write-all
     steps:
       - uses: actions/checkout@v3
 
