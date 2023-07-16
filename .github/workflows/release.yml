@@ -1,0 +1,73 @@
+on:
+  push:
+    tags:
+      - "v[0-9]+"
+
+name: Create Release
+
+jobs:
+  run_pr_checks:
+    uses: ./.github/workflows/pr_checks.yml
+
+  create_changelog:
+    name: Create changelog
+    runs-on: ubuntu-latest
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Update CHANGELOG
+        id: changelog
+        uses: requarks/changelog-action@v1
+        with:
+          token: ${{ github.token }}
+          tag: ${{ github.ref_name }}
+
+      - run: echo "${{ toJson(steps.build_changelog.outputs) }}"
+
+  create_issue:
+    needs: [run_pr_checks, create_changelog]
+    if: ${{ always() }}
+    name: Create Issue
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Create Issue
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          version: ${{ github.ref }}
+          tests_url: ${{ needs.run_pr_checks.outputs.url }}
+          changelog: ${{ needs.create_changelog.outputs.changelog }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          update_existing: true
+
+  create_release:
+    needs: [run_pr_checks, create_changelog]
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release version ${{ github.ref_name }}
+          body: |
+            ## Changelog:
+            ${{ needs.create_changelog.outputs.changelog }}
+            ## Tests result:
+            ${{ needs.run_pr_checks.outputs.url }}
+
+          draft: false
+          prerelease: false
+
+  deploy:
+    needs: run_pr_checks
+    uses: ./.github/workflows/deploy.yml
