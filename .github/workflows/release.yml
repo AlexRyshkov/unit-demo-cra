@@ -3,7 +3,7 @@ on:
     tags:
       - "v[0-9]+"
 
-name: Create Release
+name: Release
 
 jobs:
   Tests:
