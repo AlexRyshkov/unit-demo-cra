@@ -6,8 +6,8 @@ on:
 name: Create Release
 
 jobs:
-  run_pr_checks:
-    uses: ./.github/workflows/pr_checks.yml
+  Tests:
+    uses: ./.github/workflows/tests.yml
 
   create_changelog:
     name: Create changelog
@@ -27,7 +27,7 @@ jobs:
       - run: echo "${{ toJson(steps.build_changelog.outputs) }}"
 
   create_issue:
-    needs: [run_pr_checks, create_changelog]
+    needs: [Tests, create_changelog]
     if: ${{ always() }}
     name: Create Issue
     runs-on: ubuntu-latest
@@ -38,14 +38,14 @@ jobs:
         uses: JasonEtco/create-an-issue@v2
         env:
           version: ${{ github.ref }}
-          tests_url: ${{ needs.run_pr_checks.outputs.url }}
+          tests_url: ${{ needs.Tests.outputs.url }}
           changelog: ${{ needs.create_changelog.outputs.changelog }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           update_existing: true
 
   create_release:
-    needs: [run_pr_checks, create_changelog]
+    needs: [Tests, create_changelog]
     name: Create Release
     runs-on: ubuntu-latest
     steps:
@@ -55,7 +55,7 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
           release_name: Release version ${{ github.ref_name }}
@@ -63,11 +63,11 @@ jobs:
             ## Changelog:
             ${{ needs.create_changelog.outputs.changelog }}
             ## Tests result:
-            ${{ needs.run_pr_checks.outputs.url }}
+            ${{ needs.Tests.outputs.url }}
 
           draft: false
           prerelease: false
 
   deploy:
-    needs: run_pr_checks
+    needs: Tests
     uses: ./.github/workflows/deploy.yml
