@@ -6,8 +6,8 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
+  pages: none
+  id-token: none
 
 concurrency:
   group: 'pages'
